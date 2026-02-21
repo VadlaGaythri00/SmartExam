@@ -1,8 +1,17 @@
 import streamlit as st
 import pandas as pd
-from seating_logic import *
-from excel_generator import *
 from io import BytesIO
+
+# ✅ Explicit imports (Cloud safe)
+from seating_logic import (
+    calculate_capacity,
+    distribute_students,
+    generate_grid,
+    assign_invigilators
+)
+
+from excel_generator import generate_excel
+
 
 st.set_page_config(page_title="SmartExam", layout="wide")
 
@@ -31,19 +40,21 @@ for i in range(num_rooms):
     rows = st.sidebar.number_input(
         f"Rows (Room {i+1})",
         min_value=1,
-        value=5
+        value=5,
+        key=f"rows_{i}"
     )
 
     columns = st.sidebar.number_input(
         f"Columns (Room {i+1})",
         min_value=1,
-        value=5
+        value=5,
+        key=f"cols_{i}"
     )
 
     rooms.append({
         "name": name,
-        "rows": rows,
-        "columns": columns
+        "rows": int(rows),
+        "columns": int(columns)
     })
 
 students_per_bench = st.sidebar.selectbox(
@@ -108,7 +119,7 @@ if st.button("Generate Seating Plan"):
     for room in rooms:
         grid, structured = generate_grid(
             room["name"],
-            allocation[room["name"]],
+            allocation.get(room["name"], []),
             room["rows"],
             room["columns"]
         )
@@ -151,6 +162,9 @@ if st.button("Generate Seating Plan"):
         st.markdown(f"### {room_name}")
 
         seating_df = pd.DataFrame(data["grid"])
+        seating_df.index = [f"Row {i+1}" for i in range(len(seating_df))]
+        seating_df.columns = [f"Col {i+1}" for i in range(len(seating_df.columns))]
+
         st.table(seating_df)
 
     # ---------------- EXCEL GENERATION ---------------- #
@@ -170,14 +184,16 @@ if st.button("Generate Seating Plan"):
 
     st.subheader("📥 Excel Options")
 
-    view_excel = st.button("View Excel Data")
+    colA, colB = st.columns(2)
 
-    if view_excel:
-        st.dataframe(pd.DataFrame(all_structured))
+    with colA:
+        if st.button("View Excel Data"):
+            st.dataframe(pd.DataFrame(all_structured))
 
-    st.download_button(
-        label="Download Excel File",
-        data=buffer,
-        file_name="SmartExam_Seating.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    with colB:
+        st.download_button(
+            label="Download Excel File",
+            data=buffer,
+            file_name="SmartExam_Seating.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
