@@ -1,47 +1,68 @@
 from openpyxl import Workbook
 
 
-def generate_excel(summary, room_data, invigilators):
+def generate_excel(summary_data, room_output, inv_map):
+
     wb = Workbook()
+    ws = wb.active
+    ws.title = "SmartExam Seating"
 
-    # ------------------ Summary Sheet ------------------
-    summary_sheet = wb.active
-    summary_sheet.title = "Summary"
+    row_pointer = 1
 
-    summary_sheet.append(["Total Rooms", summary["rooms"]])
-    summary_sheet.append(["Total Students", summary["students"]])
-    summary_sheet.append(["Total Capacity", summary["capacity"]])
-    summary_sheet.append(["Students per Bench", summary["students_per_bench"]])
-    summary_sheet.append([])
+    # ---------------- SUMMARY ---------------- #
 
-    summary_sheet.append(["Invigilator Allocation"])
-    for room, inv in invigilators.items():
-        summary_sheet.append([room, inv])
+    ws.cell(row=row_pointer, column=1, value="Total Rooms")
+    ws.cell(row=row_pointer, column=2, value=summary_data["rooms"])
+    row_pointer += 1
 
-    # ------------------ Room Sheets ------------------
-    for room_name, data in room_data.items():
-        sheet = wb.create_sheet(title=room_name)
+    ws.cell(row=row_pointer, column=1, value="Total Students")
+    ws.cell(row=row_pointer, column=2, value=summary_data["students"])
+    row_pointer += 1
+
+    ws.cell(row=row_pointer, column=1, value="Total Capacity")
+    ws.cell(row=row_pointer, column=2, value=summary_data["capacity"])
+    row_pointer += 1
+
+    ws.cell(row=row_pointer, column=1, value="Students per Bench")
+    ws.cell(row=row_pointer, column=2, value=summary_data["students_per_bench"])
+    row_pointer += 2
+
+    # ---------------- INVIGILATORS ---------------- #
+
+    ws.cell(row=row_pointer, column=1, value="Invigilator Allocation")
+    row_pointer += 1
+
+    for room, inv in inv_map.items():
+        ws.cell(row=row_pointer, column=1, value=room)
+        ws.cell(row=row_pointer, column=2, value=inv)
+        row_pointer += 1
+
+    row_pointer += 2
+
+    # ---------------- SEATING ARRANGEMENT ---------------- #
+
+    for room_name, data in room_output.items():
+
+        ws.cell(row=row_pointer, column=1, value=f"{room_name} Seating")
+        row_pointer += 1
 
         grid = data["grid"]
-        structured = data["structured"]
 
-        # 🔹 Grid Layout
-        sheet.append(["Seating Layout"])
-        for row in grid:
-            sheet.append(row)
+        # Column Headers
+        for col in range(len(grid[0])):
+            ws.cell(row=row_pointer, column=col + 2, value=f"Col {col+1}")
 
-        sheet.append([])
+        row_pointer += 1
 
-        # 🔹 Structured Table
-        sheet.append(["Structured Data"])
-        sheet.append(["Room", "Row", "Column", "Roll Number"])
+        # Rows
+        for i, row in enumerate(grid):
+            ws.cell(row=row_pointer, column=1, value=f"Row {i+1}")
 
-        for item in structured:
-            sheet.append([
-                item["Room"],
-                item["Row"],
-                item["Column"],
-                item["Roll Number"]
-            ])
+            for j, seat in enumerate(row):
+                ws.cell(row=row_pointer, column=j + 2, value=seat)
+
+            row_pointer += 1
+
+        row_pointer += 2
 
     return wb
