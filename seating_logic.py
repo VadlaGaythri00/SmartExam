@@ -1,62 +1,67 @@
-# seating_logic.py
-
 import random
 
 
 def calculate_capacity(rooms, students_per_bench):
     total_capacity = 0
+    room_capacities = {}
 
     for room in rooms:
-        total_seats = room["rows"] * room["columns"] * students_per_bench
-        room["capacity"] = total_seats
-        total_capacity += total_seats
+        benches = room["rows"] * room["columns"]
+        capacity = benches * students_per_bench
+        room_capacities[room["name"]] = capacity
+        total_capacity += capacity
 
-    return total_capacity, rooms
+    return total_capacity, room_capacities
 
 
-def distribute_students(students, rooms, mode):
-
+def distribute_students(roll_numbers, room_capacities, mode):
     if mode == "Random":
-        random.shuffle(students)
+        random.shuffle(roll_numbers)
 
     allocation = {}
     index = 0
 
-    for room in rooms:
-        capacity = room["capacity"]
-        allocation[room["name"]] = students[index:index + capacity]
+    for room, capacity in room_capacities.items():
+        allocation[room] = roll_numbers[index:index + capacity]
         index += capacity
 
     return allocation
 
 
-def generate_seat_mapping(room, students):
-    """
-    Simple seat numbering per room
-    """
-
+def generate_grid(room_name, students, rows, columns):
+    grid = []
     structured = []
+    student_index = 0
 
-    for i, student in enumerate(students):
-        structured.append({
-            "Room": room["name"],
-            "Seat Number": i + 1,
-            "Roll Number": student
-        })
+    for r in range(1, rows + 1):
+        row_data = []
 
-    return structured
+        for c in range(1, columns + 1):
+            if student_index < len(students):
+                roll = students[student_index]
+
+                row_data.append(roll)
+
+                structured.append({
+                    "Room": room_name,
+                    "Row": r,
+                    "Column": c,
+                    "Roll Number": roll
+                })
+
+                student_index += 1
+            else:
+                row_data.append("")
+
+        grid.append(row_data)
+
+    return grid, structured
 
 
-def assign_invigilators(total_invigilators, rooms):
-
-    room_count = len(rooms)
-    distribution = {}
-
-    base = total_invigilators // room_count
-    remainder = total_invigilators % room_count
+def assign_invigilators(num_invigilators, rooms):
+    invigilator_map = {}
 
     for i, room in enumerate(rooms):
-        assigned = base + (1 if i < remainder else 0)
-        distribution[room["name"]] = max(1, assigned)
+        invigilator_map[room["name"]] = f"Invigilator {(i % num_invigilators) + 1}"
 
-    return distribution
+    return invigilator_map
