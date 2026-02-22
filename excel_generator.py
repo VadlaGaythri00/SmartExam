@@ -21,10 +21,6 @@ def generate_excel(summary_data, room_output, inv_map):
 
     ws.cell(row=row_pointer, column=1, value="Total Capacity")
     ws.cell(row=row_pointer, column=2, value=summary_data["capacity"])
-    row_pointer += 1
-
-    ws.cell(row=row_pointer, column=1, value="Students per Bench")
-    ws.cell(row=row_pointer, column=2, value=summary_data["students_per_bench"])
     row_pointer += 2
 
     # ---------------- INVIGILATORS ---------------- #
@@ -39,12 +35,16 @@ def generate_excel(summary_data, room_output, inv_map):
 
     row_pointer += 2
 
-    # ---------------- SEATING ARRANGEMENT ---------------- #
+    # ---------------- SEATING ---------------- #
 
     for room_name, data in room_output.items():
 
         ws.cell(row=row_pointer, column=1, value=f"{room_name} Seating")
         row_pointer += 1
+
+        ws.cell(row=row_pointer, column=1, value="Invigilator:")
+        ws.cell(row=row_pointer, column=2, value=inv_map.get(room_name, ""))
+        row_pointer += 2
 
         grid = data["grid"]
 

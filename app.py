@@ -2,12 +2,10 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
-# ✅ Explicit imports (Cloud safe)
 from seating_logic import (
     calculate_capacity,
     distribute_students,
     generate_grid,
-    assign_invigilators
 )
 
 from excel_generator import generate_excel
@@ -28,13 +26,15 @@ num_rooms = st.sidebar.number_input(
 )
 
 rooms = []
+invigilator_inputs = {}
 
 for i in range(num_rooms):
     st.sidebar.subheader(f"Room {i+1}")
 
     name = st.sidebar.text_input(
         f"Room Name {i+1}",
-        value=f"Room{i+1}"
+        value=f"Room{i+1}",
+        key=f"name_{i}"
     )
 
     rows = st.sidebar.number_input(
@@ -51,21 +51,23 @@ for i in range(num_rooms):
         key=f"cols_{i}"
     )
 
+    invigilator_name = st.sidebar.text_input(
+        f"Invigilator Name (Room {i+1})",
+        value=f"Invigilator {i+1}",
+        key=f"inv_{i}"
+    )
+
     rooms.append({
         "name": name,
         "rows": int(rows),
         "columns": int(columns)
     })
 
+    invigilator_inputs[name] = invigilator_name
+
 students_per_bench = st.sidebar.selectbox(
     "Students per Bench",
     [1]
-)
-
-invigilators = st.sidebar.number_input(
-    "Total Invigilators",
-    min_value=1,
-    value=1
 )
 
 mode = st.sidebar.selectbox(
@@ -108,13 +110,7 @@ if st.button("Generate Seating Plan"):
         mode
     )
 
-    inv_map = assign_invigilators(
-        invigilators,
-        rooms
-    )
-
     room_output = {}
-    all_structured = []
 
     for room in rooms:
         grid, structured = generate_grid(
@@ -125,11 +121,8 @@ if st.button("Generate Seating Plan"):
         )
 
         room_output[room["name"]] = {
-            "grid": grid,
-            "structured": structured
+            "grid": grid
         }
-
-        all_structured.extend(structured)
 
     # ---------------- SUMMARY ---------------- #
 
@@ -137,18 +130,17 @@ if st.button("Generate Seating Plan"):
 
     st.subheader("📊 Summary")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     col1.metric("Total Students", total_students)
     col2.metric("Total Capacity", total_capacity)
-    col3.metric("Unallocated Seats", total_capacity - total_students)
 
     # ---------------- INVIGILATORS ---------------- #
 
     st.subheader("👨‍🏫 Invigilator Allocation")
 
     inv_df = pd.DataFrame(
-        list(inv_map.items()),
+        list(invigilator_inputs.items()),
         columns=["Room", "Invigilator"]
     )
 
@@ -176,24 +168,15 @@ if st.button("Generate Seating Plan"):
         "students_per_bench": students_per_bench
     }
 
-    wb = generate_excel(summary_data, room_output, inv_map)
+    wb = generate_excel(summary_data, room_output, invigilator_inputs)
 
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
 
-    st.subheader("📥 Excel Options")
-
-    colA, colB = st.columns(2)
-
-    with colA:
-        if st.button("View Excel Data"):
-            st.dataframe(pd.DataFrame(all_structured))
-
-    with colB:
-        st.download_button(
-            label="Download Excel File",
-            data=buffer,
-            file_name="SmartExam_Seating.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    st.download_button(
+        label="Download Seating Plan (Excel)",
+        data=buffer,
+        file_name="SmartExam_Seating.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
